@@ -18,10 +18,6 @@ type parserMixin struct {
 	required bool
 }
 
-func (p *parserMixin) SetText(text Text) {
-	p.value = &wrapText{text}
-}
-
 func (p *parserMixin) SetValue(value Value) {
 	p.value = value
 }

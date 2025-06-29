@@ -1,0 +1,30 @@
+// protos/tagdict.proto
+syntax = "proto3";
+package pb; // 包名
+
+option go_package = "github.com/kaizhang15/cortex-cloudts/pkg/pb";
+
+message TagDictSnapshot {
+  message TrieNode {
+    string path_fragment = 1;  // 当前路径段（如 "cpu" 或 "core1"）
+    uint32 encoding = 2;
+    string full_path = 3;      // 完整路径（如 "cpu=core1"）
+    NodeType type = 4;         // 节点类型枚举
+  }
+
+  message Partition {
+    uint64 partition_id = 1;
+    map<uint32, uint32> tag_frequencies = 2; // encoding -> count
+  }
+
+  repeated TrieNode nodes = 1;
+  repeated Partition partitions = 2;
+  uint32 next_encoding = 3;
+}
+
+enum NodeType {
+    ROOT = 0;  
+    METRIC = 1;
+    TAG_NAME = 2;
+    TAG_VALUE = 3;
+}

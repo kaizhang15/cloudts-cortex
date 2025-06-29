@@ -234,7 +234,7 @@ func (m *Memberlist) handleConn(conn net.Conn) {
 	defer conn.Close()
 	m.logger.Printf("[DEBUG] memberlist: Stream connection %s", LogConn(conn))
 
-	metrics.IncrCounter([]string{"memberlist", "tcp", "accept"}, 1)
+	metrics.IncrCounterWithLabels([]string{"memberlist", "tcp", "accept"}, 1, m.metricLabels)
 
 	conn.SetDeadline(time.Now().Add(m.config.TCPTimeout))
 
@@ -249,6 +249,10 @@ func (m *Memberlist) handleConn(conn net.Conn) {
 	}
 
 	if m.config.SkipInboundLabelCheck {
+		if streamLabel != "" {
+			m.logger.Printf("[ERR] memberlist: unexpected double stream label header: %s", LogConn(conn))
+			return
+		}
 		// Set this from config so that the auth data assertions work below.
 		streamLabel = m.config.Label
 	}
@@ -365,6 +369,10 @@ func (m *Memberlist) ingestPacket(buf []byte, from net.Addr, timestamp time.Time
 	}
 
 	if m.config.SkipInboundLabelCheck {
+		if packetLabel != "" {
+			m.logger.Printf("[ERR] memberlist: unexpected double packet label header: %s", LogAddress(from))
+			return
+		}
 		// Set this from config so that the auth data assertions work below.
 		packetLabel = m.config.Label
 	}
@@ -792,17 +800,11 @@ func (m *Memberlist) sendMsg(a Address, msg []byte) error {
 	msgs = append(msgs, msg)
 	msgs = append(msgs, extra...)
 
-	// Create one or more compound messages.
-	compounds := makeCompoundMessages(msgs)
+	// Create a compound message
+	compound := makeCompoundMessage(msgs)
 
-	// Send the messages.
-	for _, compound := range compounds {
-		if err := m.rawSendMsgPacket(a, nil, compound.Bytes()); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	// Send the message
+	return m.rawSendMsgPacket(a, nil, compound.Bytes())
 }
 
 // rawSendMsgPacket is used to send message via packet to another host without
@@ -867,7 +869,7 @@ func (m *Memberlist) rawSendMsgPacket(a Address, node *Node, msg []byte) error {
 		msg = buf.Bytes()
 	}
 
-	metrics.IncrCounter([]string{"memberlist", "udp", "sent"}, float32(len(msg)))
+	metrics.IncrCounterWithLabels([]string{"memberlist", "udp", "sent"}, float32(len(msg)), m.metricLabels)
 	_, err := m.transport.WriteToAddress(msg, a)
 	return err
 }
@@ -896,7 +898,7 @@ func (m *Memberlist) rawSendMsgStream(conn net.Conn, sendBuf []byte, streamLabel
 	}
 
 	// Write out the entire send buffer
-	metrics.IncrCounter([]string{"memberlist", "tcp", "sent"}, float32(len(sendBuf)))
+	metrics.IncrCounterWithLabels([]string{"memberlist", "tcp", "sent"}, float32(len(sendBuf)), m.metricLabels)
 
 	if n, err := conn.Write(sendBuf); err != nil {
 		return err
@@ -951,7 +953,7 @@ func (m *Memberlist) sendAndReceiveState(a Address, join bool) ([]pushNodeState,
 	}
 	defer conn.Close()
 	m.logger.Printf("[DEBUG] memberlist: Initiating push/pull sync with: %s %s", a.Name, conn.RemoteAddr())
-	metrics.IncrCounter([]string{"memberlist", "tcp", "connect"}, 1)
+	metrics.IncrCounterWithLabels([]string{"memberlist", "tcp", "connect"}, 1, m.metricLabels)
 
 	// Send our state
 	if err := m.sendLocalState(conn, join, m.config.Label); err != nil {
@@ -1005,6 +1007,22 @@ func (m *Memberlist) sendLocalState(conn net.Conn, join bool, streamLabel string
 	}
 	m.nodeLock.RUnlock()
 
+	nodeStateCounts := make(map[string]int)
+	nodeStateCounts[StateAlive.metricsString()] = 0
+	nodeStateCounts[StateLeft.metricsString()] = 0
+	nodeStateCounts[StateDead.metricsString()] = 0
+	nodeStateCounts[StateSuspect.metricsString()] = 0
+
+	for _, n := range localNodes {
+		nodeStateCounts[n.State.metricsString()]++
+	}
+
+	for nodeState, cnt := range nodeStateCounts {
+		metrics.SetGaugeWithLabels([]string{"memberlist", "node", "instances"},
+			float32(cnt),
+			append(m.metricLabels, metrics.Label{Name: "node_state", Value: nodeState}))
+	}
+
 	// Get the delegate state
 	var userData []byte
 	if m.config.Delegate != nil {
@@ -1039,6 +1057,9 @@ func (m *Memberlist) sendLocalState(conn net.Conn, join bool, streamLabel string
 			return err
 		}
 	}
+
+	moreBytes := binary.BigEndian.Uint32(bufConn.Bytes()[1:5])
+	metrics.SetGaugeWithLabels([]string{"memberlist", "size", "local"}, float32(moreBytes), m.metricLabels)
 
 	// Get the send buffer
 	return m.rawSendMsgStream(conn, bufConn.Bytes(), streamLabel)
@@ -1086,6 +1107,8 @@ func (m *Memberlist) decryptRemoteState(bufConn io.Reader, streamLabel string) (
 	// Ensure we aren't asked to download too much. This is to guard against
 	// an attack vector where a huge amount of state is sent
 	moreBytes := binary.BigEndian.Uint32(cipherText.Bytes()[1:5])
+	metrics.AddSampleWithLabels([]string{"memberlist", "size", "remote"}, float32(moreBytes), m.metricLabels)
+
 	if moreBytes > maxPushStateBytes {
 		return nil, fmt.Errorf("Remote node state is larger than limit (%d)", moreBytes)
 

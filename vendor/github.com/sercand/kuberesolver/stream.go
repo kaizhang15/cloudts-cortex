@@ -1,7 +1,6 @@
 package kuberesolver
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -79,8 +78,6 @@ func (sw *streamWatcher) receive() {
 			switch err {
 			case io.EOF:
 				// watch closed normally
-			case context.Canceled:
-				// canceled normally
 			case io.ErrUnexpectedEOF:
 				grpclog.Infof("kuberesolver: Unexpected EOF during watch stream event decoding: %v", err)
 			default:

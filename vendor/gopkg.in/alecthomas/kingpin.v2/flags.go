@@ -109,8 +109,6 @@ loop:
 
 			context.Next()
 
-			flag.isSetByUser()
-
 			fb, ok := flag.value.(boolFlag)
 			if ok && fb.IsBoolFlag() {
 				if invert {
@@ -154,7 +152,6 @@ type FlagClause struct {
 	defaultValues []string
 	placeholder   string
 	hidden        bool
-	setByUser     *bool
 }
 
 func newFlag(name, help string) *FlagClause {
@@ -190,12 +187,6 @@ func (f *FlagClause) setDefault() error {
 	}
 
 	return nil
-}
-
-func (f *FlagClause) isSetByUser() {
-	if f.setByUser != nil {
-		*f.setByUser = true
-	}
 }
 
 func (f *FlagClause) needsValue() bool {
@@ -255,15 +246,6 @@ func (a *FlagClause) Enum(options ...string) (target *string) {
 	return a.parserMixin.Enum(options...)
 }
 
-// IsSetByUser let to know if the flag was set by the user
-func (f *FlagClause) IsSetByUser(setByUser *bool) *FlagClause {
-	if setByUser != nil {
-		*setByUser = false
-	}
-	f.setByUser = setByUser
-	return f
-}
-
 // Default values for this flag. They *must* be parseable by the value of the flag.
 func (f *FlagClause) Default(values ...string) *FlagClause {
 	f.defaultValues = values
@@ -315,12 +297,6 @@ func (f *FlagClause) Required() *FlagClause {
 // Short sets the short flag name.
 func (f *FlagClause) Short(name rune) *FlagClause {
 	f.shorthand = name
-	return f
-}
-
-// Help sets the help message.
-func (f *FlagClause) Help(help string) *FlagClause {
-	f.help = help
 	return f
 }
 
