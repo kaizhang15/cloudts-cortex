@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/kaizhang15/cortex-cloudts/pkg/cloudts/tagdict" 
+	"github.com/kaizhang15/cloudts-cortex/pkg/cloudts/tagdict" 
 )
 
 func main() {

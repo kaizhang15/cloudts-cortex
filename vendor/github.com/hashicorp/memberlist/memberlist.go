@@ -27,7 +27,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
 	multierror "github.com/hashicorp/go-multierror"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/miekg/dns"
@@ -78,9 +77,6 @@ type Memberlist struct {
 	broadcasts *TransmitLimitedQueue
 
 	logger *log.Logger
-
-	// metricLabels is the slice of labels to put on all emitted metrics
-	metricLabels []metrics.Label
 }
 
 // BuildVsnArray creates the array of Vsn
@@ -139,10 +135,9 @@ func newMemberlist(conf *Config) (*Memberlist, error) {
 	transport := conf.Transport
 	if transport == nil {
 		nc := &NetTransportConfig{
-			BindAddrs:    []string{conf.BindAddr},
-			BindPort:     conf.BindPort,
-			Logger:       logger,
-			MetricLabels: conf.MetricLabels,
+			BindAddrs: []string{conf.BindAddr},
+			BindPort:  conf.BindPort,
+			Logger:    logger,
 		}
 
 		// See comment below for details about the retry in here.
@@ -213,11 +208,10 @@ func newMemberlist(conf *Config) (*Memberlist, error) {
 		lowPriorityMsgQueue:  list.New(),
 		nodeMap:              make(map[string]*nodeState),
 		nodeTimers:           make(map[string]*suspicion),
-		awareness:            newAwareness(conf.AwarenessMaxMultiplier, conf.MetricLabels),
+		awareness:            newAwareness(conf.AwarenessMaxMultiplier),
 		ackHandlers:          make(map[uint32]*ackHandler),
 		broadcasts:           &TransmitLimitedQueue{RetransmitMult: conf.RetransmitMult},
 		logger:               logger,
-		metricLabels:         conf.MetricLabels,
 	}
 	m.broadcasts.NumNodes = func() int {
 		return m.estNumNodes()
@@ -233,7 +227,6 @@ func newMemberlist(conf *Config) (*Memberlist, error) {
 	go m.streamListen()
 	go m.packetListen()
 	go m.packetHandler()
-	go m.checkBroadcastQueueDepth()
 	return m, nil
 }
 
@@ -776,18 +769,4 @@ func (m *Memberlist) changeNode(addr string, f func(*nodeState)) {
 
 	n := m.nodeMap[addr]
 	f(n)
-}
-
-// checkBroadcastQueueDepth periodically checks the size of the broadcast queue
-// to see if it is too large
-func (m *Memberlist) checkBroadcastQueueDepth() {
-	for {
-		select {
-		case <-time.After(m.config.QueueCheckInterval):
-			numq := m.broadcasts.NumQueued()
-			metrics.AddSampleWithLabels([]string{"memberlist", "queue", "broadcasts"}, float32(numq), m.metricLabels)
-		case <-m.shutdownCh:
-			return
-		}
-	}
 }

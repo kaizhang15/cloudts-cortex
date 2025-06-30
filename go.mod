@@ -1,4 +1,4 @@
-module github.com/kaizhang15/cortex-cloudts
+module github.com/kaizhang15/cloudts-cortex
 
 go 1.24.4
 
@@ -24,7 +24,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/gogo/status v1.1.1
 	github.com/golang-migrate/migrate/v4 v4.16.2
-	github.com/golang/protobuf v1.5.3
+	github.com/golang/protobuf v1.5.4
 	github.com/golang/snappy v0.0.4
 	github.com/google/go-cmp v0.5.9
 	github.com/gorilla/mux v1.8.0
@@ -73,7 +73,7 @@ require (
 	golang.org/x/sync v0.3.0
 	golang.org/x/time v0.3.0
 	google.golang.org/grpc v1.58.2
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	sigs.k8s.io/yaml v1.3.0
@@ -229,3 +229,35 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/telebot.v3 v3.1.3 // indirect
 )
+
+// Override since git.apache.org is down.  The docs say to fetch from github.
+replace git.apache.org/thrift.git => github.com/apache/thrift v0.0.0-20180902110319-2566ecd5d999
+
+// Use fork of gocql that has gokit logs and Prometheus metrics.
+replace github.com/gocql/gocql => github.com/grafana/gocql v0.0.0-20200605141915-ba5dc39ece85
+
+// Using a 3rd-party branch for custom dialer - see https://github.com/bradfitz/gomemcache/pull/86
+replace github.com/bradfitz/gomemcache => github.com/themihai/gomemcache v0.0.0-20180902122335-24332e2d58ab
+
+// Replace memberlist with Grafana's fork which includes some fixes that haven't been merged upstream yet
+replace github.com/hashicorp/memberlist => github.com/grafana/memberlist v0.3.1-0.20220714140823-09ffed8adbbe
+
+// Same version being used by thanos
+replace github.com/vimeo/galaxycache => github.com/thanos-community/galaxycache v0.0.0-20211122094458-3a32041a1f1e
+
+// v0.20.5 caused go mod checksum error
+replace github.com/go-openapi/spec => github.com/go-openapi/spec v0.20.6
+
+// the v6.0.5851 Prometheus depends on doesn't seem to exist anymore?
+replace github.com/ionos-cloud/sdk-go/v6 => github.com/ionos-cloud/sdk-go/v6 v6.0.4
+
+replace github.com/google/gnostic => github.com/googleapis/gnostic v0.6.9
+
+// Same replace used by thanos: (may be removed in the future)
+// https://github.com/thanos-io/thanos/blob/fdeea3917591fc363a329cbe23af37c6fff0b5f0/go.mod#L265
+replace gopkg.in/alecthomas/kingpin.v2 => github.com/alecthomas/kingpin v1.3.8-0.20210301060133-17f40c25f497
+
+replace github.com/sercand/kuberesolver => github.com/sercand/kuberesolver/v4 v4.0.0
+
+// v1.58.2 caused compile error on github.com/sercand/kuberesolver (even on v5.1.1)
+replace google.golang.org/grpc => google.golang.org/grpc v1.56.2

@@ -1,0 +1,18 @@
+syntax = "proto3";
+package cloudts.pb;
+
+option go_package = "github.com/kaizhang15/cloudts-cortex/pkg/cloudts/pb";
+
+message TTMappingSnapshot {
+    uint64 partition_id = 1;
+    repeated uint64 timeseries_ids = 2 [packed=true];
+    CompressedBitmap bitmap = 3;
+    int64 last_updated = 4; // Unix timestamp
+}
+
+message CompressedBitmap {
+    repeated uint32 indices = 1 [packed=true];
+    repeated int32 pointers = 2 [packed=true];
+    int32 rows = 3;
+    int32 cols = 4;
+}

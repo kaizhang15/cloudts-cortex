@@ -4,7 +4,7 @@ package tagdict
 import (
 	"strings"
 	"github.com/golang/protobuf/proto"              // Protobuf 序列化
-	"github.com/kaizhang15/cortex-cloudts/pkg/pb"	// pb
+	"github.com/kaizhang15/cloudts-cortex/pkg/cloudts/pb"	// pb
 )
 
 func LoadTagDictFromSnapshot(data []byte) (*TagDict, error) {

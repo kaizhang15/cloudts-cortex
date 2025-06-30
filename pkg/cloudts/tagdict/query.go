@@ -42,3 +42,10 @@ func (td *TagDict) getTagEncoding(tagPair string) (uint32, bool) {
 	}
 	return 0, false
 }
+
+func (td *TagDict) GetEncoding(tagPair string) (uint32, bool) {
+    if strings.Contains(tagPair, "=") {
+        return td.getTagEncoding(tagPair)
+    }
+    return td.getMetricEncoding(tagPair)
+}

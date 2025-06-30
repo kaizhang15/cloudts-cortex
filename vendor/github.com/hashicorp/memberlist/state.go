@@ -15,21 +15,6 @@ import (
 
 type NodeStateType int
 
-func (t NodeStateType) metricsString() string {
-	switch t {
-	case StateAlive:
-		return "alive"
-	case StateDead:
-		return "dead"
-	case StateSuspect:
-		return "suspect"
-	case StateLeft:
-		return "left"
-	default:
-		return fmt.Sprintf("unhandled-value-%d", t)
-	}
-}
-
 const (
 	StateAlive NodeStateType = iota
 	StateSuspect
@@ -301,14 +286,14 @@ func failedRemote(err error) bool {
 
 // probeNode handles a single round of failure checking on a node.
 func (m *Memberlist) probeNode(node *nodeState) {
-	defer metrics.MeasureSinceWithLabels([]string{"memberlist", "probeNode"}, time.Now(), m.metricLabels)
+	defer metrics.MeasureSince([]string{"memberlist", "probeNode"}, time.Now())
 
 	// We use our health awareness to scale the overall probe interval, so we
 	// slow down if we detect problems. The ticker that calls us can handle
 	// us running over the base interval, and will skip missed ticks.
 	probeInterval := m.awareness.ScaleTimeout(m.config.ProbeInterval)
 	if probeInterval > m.config.ProbeInterval {
-		metrics.IncrCounterWithLabels([]string{"memberlist", "degraded", "probe"}, 1, m.metricLabels)
+		metrics.IncrCounter([]string{"memberlist", "degraded", "probe"}, 1)
 	}
 
 	// Prepare a ping message and setup an ack handler.
@@ -588,7 +573,7 @@ func (m *Memberlist) resetNodes() {
 // gossip is invoked every GossipInterval period to broadcast our gossip
 // messages to a few random nodes.
 func (m *Memberlist) gossip() {
-	defer metrics.MeasureSinceWithLabels([]string{"memberlist", "gossip"}, time.Now(), m.metricLabels)
+	defer metrics.MeasureSince([]string{"memberlist", "gossip"}, time.Now())
 
 	// Get some random live, suspect, or recently dead nodes
 	m.nodeLock.RLock()
@@ -668,7 +653,7 @@ func (m *Memberlist) pushPull() {
 
 // pushPullNode does a complete state exchange with a specific node.
 func (m *Memberlist) pushPullNode(a Address, join bool) error {
-	defer metrics.MeasureSinceWithLabels([]string{"memberlist", "pushPullNode"}, time.Now(), m.metricLabels)
+	defer metrics.MeasureSince([]string{"memberlist", "pushPullNode"}, time.Now())
 
 	// Attempt to send and receive with the node
 	remote, userState, err := m.sendAndReceiveState(a, join)
@@ -1140,7 +1125,7 @@ func (m *Memberlist) aliveNode(a *alive, notify chan struct{}, bootstrap bool) {
 	}
 
 	// Update metrics
-	metrics.IncrCounterWithLabels([]string{"memberlist", "msg", "alive"}, 1, m.metricLabels)
+	metrics.IncrCounter([]string{"memberlist", "msg", "alive"}, 1)
 
 	// Notify the delegate of any relevant updates
 	if m.config.Events != nil {
@@ -1198,7 +1183,7 @@ func (m *Memberlist) suspectNode(s *suspect) {
 	}
 
 	// Update metrics
-	metrics.IncrCounterWithLabels([]string{"memberlist", "msg", "suspect"}, 1, m.metricLabels)
+	metrics.IncrCounter([]string{"memberlist", "msg", "suspect"}, 1)
 
 	// Update the state
 	state.Incarnation = s.Incarnation
@@ -1236,7 +1221,7 @@ func (m *Memberlist) suspectNode(s *suspect) {
 
 		if timeout {
 			if k > 0 && numConfirmations < k {
-				metrics.IncrCounterWithLabels([]string{"memberlist", "degraded", "timeout"}, 1, m.metricLabels)
+				metrics.IncrCounter([]string{"memberlist", "degraded", "timeout"}, 1)
 			}
 
 			m.logger.Printf("[INFO] memberlist: Marking %s as failed, suspect timeout reached (%d peer confirmations)",
@@ -1289,7 +1274,7 @@ func (m *Memberlist) deadNode(d *dead) {
 	}
 
 	// Update metrics
-	metrics.IncrCounterWithLabels([]string{"memberlist", "msg", "dead"}, 1, m.metricLabels)
+	metrics.IncrCounter([]string{"memberlist", "msg", "dead"}, 1)
 
 	// Update the state
 	state.Incarnation = d.Incarnation

@@ -4,7 +4,7 @@ import (
 	"os"
     "testing"
     // 使用完整模块路径导入
-    // "github.com/kaizhang15/cortex-cloudts/pkg/cloudts/tagdict" 
+    // "github.com/kaizhang15/cloudts-cortex/pkg/cloudts/tagdict" 
 )
 
 func TestTagDict(t *testing.T) {

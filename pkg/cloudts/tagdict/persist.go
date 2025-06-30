@@ -9,7 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/s3"          // AWS S3 客户端
 	"github.com/golang/protobuf/proto"              // Protobuf 序列化
-	"github.com/kaizhang15/cortex-cloudts/pkg/pb"	// pb
+	"github.com/kaizhang15/cloudts-cortex/pkg/cloudts/pb"	// pb
 )
 
 func (td *TagDict) SaveSnapshotLocal(path string) error {
