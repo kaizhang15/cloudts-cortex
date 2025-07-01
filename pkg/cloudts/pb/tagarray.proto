@@ -1,0 +1,11 @@
+// pkg/cloudts/pb/tagarray.proto
+syntax = "proto3";
+package cloudts.pb; // 包名
+
+option go_package = "github.com/kaizhang15/cloudts-cortex/pkg/cloudts/pb";
+
+message TagArraySnapshot {
+    uint64 partition_id = 1;
+    repeated uint32 tag_encodings = 2;
+    repeated uint32 tag_counts = 3;
+}

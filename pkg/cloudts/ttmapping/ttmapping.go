@@ -1,14 +1,16 @@
 package ttmapping
 
 import (
+	"fmt"
 	"sync"
 	"time"
-	
+
 	"github.com/kaizhang15/cloudts-cortex/pkg/cloudts/pb"
 	"github.com/kaizhang15/cloudts-cortex/pkg/cloudts/tagarray"
 	"github.com/kaizhang15/cloudts-cortex/pkg/cloudts/tagdict"
+
 	// "github.com/cortexproject/cortex/pkg/ingester/client"
-	"github.com/cortexproject/cortex/pkg/cortexpb" 
+	"github.com/cortexproject/cortex/pkg/cortexpb"
 )
 
 type CompressedBitmap struct {
@@ -22,7 +24,9 @@ type TTMapping struct {
 	partition   uint64
 	timeseries  []uint64
 	bitmap      *CompressedBitmap
+	tagDict     *tagdict.TagDict
 	lastUpdated time.Time
+	lastUsed    time.Time
 	lock        sync.RWMutex
 }
 
@@ -52,12 +56,14 @@ func (bm *CompressedBitmap) Compress(dense [][]bool) {
 }
 
 // NewFromTagArrayAndIngester 从tagarray和ingester数据构建TTMapping
-func NewFromTagArrayAndIngester(
+func NewFromTadDictTagArrayAndIngester(
+	td *tagdict.TagDict,
 	ta *tagarray.TagArray,
 	ingesterSeries []cortexpb.TimeSeries,
 ) *TTMapping {
 	tm := &TTMapping{
 		partition:   ta.PartitionID,
+		tagDict:     td,
 		lastUpdated: time.Now(),
 	}
 	tm.build(ta, ingesterSeries)
@@ -89,7 +95,7 @@ func (tm *TTMapping) build(ta *tagarray.TagArray, series []cortexpb.TimeSeries) 
 	// 4. 填充位图
 	for row, s := range series {
 		for _, lbl := range s.Labels {
-			enc, ok := tagdict.GetEncoding(lbl.Name + "=" + lbl.Value) //tagdict在什么位置？应该作为变量传进来、或者作为全局变量
+			enc, ok := tm.tagDict.GetEncoding(lbl.Name + "=" + lbl.Value) //tagdict在什么位置？应该作为变量传进来、或者作为全局变量
 			if !ok {
 				continue
 			}
@@ -104,7 +110,6 @@ func (tm *TTMapping) build(ta *tagarray.TagArray, series []cortexpb.TimeSeries) 
 	tm.bitmap.Compress(bitmap)
 }
 
-
 func (bm *CompressedBitmap) FromProto(pbBm *pb.CompressedBitmap) {
 	bm.Indices = pbBm.Indices
 	bm.Pointers = make([]int, len(pbBm.Pointers))
@@ -115,16 +120,56 @@ func (bm *CompressedBitmap) FromProto(pbBm *pb.CompressedBitmap) {
 	bm.Cols = int(pbBm.Cols)
 }
 
-func NewFromProto(snapshot *pb.TTMappingSnapshot) *TTMapping {
+func NewFromProto(snapshot *pb.TTMappingSnapshot, td ...*tagdict.TagDict) *TTMapping {
 	bm := &CompressedBitmap{}
 	bm.FromProto(snapshot.Bitmap)
-	
+
+	var dict *tagdict.TagDict
+	if len(td) > 0 {
+		dict = td[0]
+	}
+
 	return &TTMapping{
 		partition:   snapshot.PartitionId,
 		timeseries:  snapshot.TimeseriesIds,
 		bitmap:      bm,
+		tagDict:     dict,
 		lastUpdated: time.Unix(0, snapshot.LastUpdated),
 	}
 }
 
+func (tm *TTMapping) BindTagDict(td *tagdict.TagDict) error {
+	tm.lock.Lock()
+	defer tm.lock.Unlock()
 
+	if tm.tagDict != nil {
+		return fmt.Errorf("tagdict already bound")
+	}
+	tm.tagDict = td
+	return nil
+}
+
+func (tm *TTMapping) LastUsed() time.Time {
+	tm.lock.RLock()
+	defer tm.lock.RUnlock()
+	return tm.lastUsed
+}
+
+func (tm *TTMapping) MarkUsed() {
+	tm.lock.Lock()
+	defer tm.lock.Unlock()
+	tm.lastUsed = time.Now()
+}
+
+// HasSeriesTag 检查指定时间序列是否包含特定标签
+func (m *TTMapping) HasSeriesTag(seriesID uint64, tagEnc uint32) bool {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	for i, id := range m.timeseries {
+		if id == seriesID {
+			return m.hasTag(i, tagEnc)
+		}
+	}
+	return false
+}

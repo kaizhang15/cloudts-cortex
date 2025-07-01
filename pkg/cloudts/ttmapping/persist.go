@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/kaizhang15/cloudts-cortex/pkg/cloudts/pb"
 	"google.golang.org/protobuf/proto"
+	// "github.com/kaizhang15/cloudts-cortex/pkg/cloudts/tagdict"
 )
 
 func (m *TTMapping) ToProto() *pb.TTMappingSnapshot {
@@ -44,6 +45,7 @@ func FromProto(data []byte) (*TTMapping, error) {
 			Rows:     int(snapshot.Bitmap.Rows),
 			Cols:     int(snapshot.Bitmap.Cols),
 		},
+		// tagDict:	 td,
 		lastUpdated: time.Unix(0, snapshot.LastUpdated),
 	}, nil
 }

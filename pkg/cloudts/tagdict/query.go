@@ -2,8 +2,12 @@ package tagdict
 
 import (
 	// "fmt"
+	"fmt"
 	"strings"
+
 	// "sync"
+
+	"github.com/prometheus/prometheus/model/labels"
 )
 
 func (td *TagDict) GetTagString(encoding uint32) (string, bool) {
@@ -44,8 +48,56 @@ func (td *TagDict) getTagEncoding(tagPair string) (uint32, bool) {
 }
 
 func (td *TagDict) GetEncoding(tagPair string) (uint32, bool) {
-    if strings.Contains(tagPair, "=") {
-        return td.getTagEncoding(tagPair)
-    }
-    return td.getMetricEncoding(tagPair)
+	if strings.Contains(tagPair, "=") {
+		return td.getTagEncoding(tagPair)
+	}
+	return td.getMetricEncoding(tagPair)
+}
+
+// func (td *TagDict) ResolveMatchers(matchers []*labels.Matcher) []uint32 {
+// 	var encodings []uint32
+
+// 	td.lock.RLock()
+// 	defer td.lock.RUnlock()
+
+// 	for _, m := range matchers {
+// 		// 构建标签查询字符串
+// 		query := m.Name + "=" + m.Value
+
+// 		// 在Trie中查找
+// 		if enc, ok := td.GetEncoding(query); ok {
+// 			encodings = append(encodings, enc)
+// 		}
+// 	}
+
+// 	return encodings
+// }
+
+func (td *TagDict) ResolveMatchers(matchers []*labels.Matcher) ([]uint32, error) {
+	var encodings []uint32
+
+	td.lock.RLock()
+	defer td.lock.RUnlock()
+
+	for _, m := range matchers {
+		// 验证匹配器类型
+		if m.Type != labels.MatchEqual {
+			return nil, fmt.Errorf("unsupported matcher type: %v", m.Type)
+		}
+
+		query := m.Name + "=" + m.Value
+		if enc, ok := td.GetEncoding(query); ok {
+			encodings = append(encodings, enc)
+		}
+	}
+
+	return encodings, nil
+}
+
+// getEncodingUnsafe 内部方法，不获取锁（由外部保证）
+func (td *TagDict) getEncodingUnsafe(tagPair string) (uint32, bool) {
+	if strings.Contains(tagPair, "=") {
+		return td.getTagEncoding(tagPair)
+	}
+	return td.getMetricEncoding(tagPair)
 }

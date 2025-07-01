@@ -3,6 +3,7 @@ package tagdict
 import (
 	// "fmt"
 	// "strings"
+	"strings"
 	"sync"
 )
 
@@ -67,4 +68,37 @@ func (td *TagDict) IterateEncodings(fn func(enc uint32, tagPair string) bool) {
 			return
 		}
 	}
+}
+
+func (td *TagDict) Version() uint32 {
+	td.lock.RLock()
+	defer td.lock.RUnlock()
+	return td.nextEncoding
+}
+
+// BatchGetOrCreate 批量获取或创建标签编码
+func (td *TagDict) BatchGetOrCreate(tagPairs []string) map[string]uint32 {
+	td.lock.Lock()
+	defer td.lock.Unlock()
+
+	results := make(map[string]uint32, len(tagPairs))
+
+	for _, tagPair := range tagPairs {
+		// 先尝试获取已有编码
+		if enc, exists := td.getEncodingUnsafe(tagPair); exists {
+			results[tagPair] = enc
+			continue
+		}
+
+		// 不存在则创建新编码
+		var enc uint32
+		if strings.Contains(tagPair, "=") {
+			enc = td.insertTagNameValueUnsafe(tagPair)
+		} else {
+			enc = td.insertPureMetricUnsafe(tagPair)
+		}
+		results[tagPair] = enc
+	}
+
+	return results
 }

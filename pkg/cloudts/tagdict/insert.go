@@ -71,3 +71,47 @@ func (td *TagDict) insertTagNameValue(tagPair string) uint32 {
 
 	return enc
 }
+
+// insertTagNameValueUnsafe 内部方法，不获取锁（由外部保证）
+func (td *TagDict) insertTagNameValueUnsafe(tagPair string) uint32 {
+	parts := strings.SplitN(tagPair, "=", 2)
+	tagName, tagValue := parts[0], parts[1]
+
+	nameNode, exists := td.root.Children[tagName]
+	if !exists {
+		nameNode = &TrieNode{
+			NodeType: TAG_NAME,
+			Children: make(map[string]*TrieNode),
+		}
+		td.root.Children[tagName] = nameNode
+	}
+
+	enc := td.nextEncoding
+	td.nextEncoding++
+
+	valueNode := &TrieNode{
+		NodeType: TAG_VALUE,
+		FullPath: tagPair,
+		Encoding: enc,
+	}
+	nameNode.Children[tagValue] = valueNode
+
+	td.reverseIndex.tags[enc] = tagPair
+	return enc
+}
+
+// insertPureMetricUnsafe 内部方法，不获取锁（由外部保证）
+func (td *TagDict) insertPureMetricUnsafe(metric string) uint32 {
+	enc := td.nextEncoding
+	td.nextEncoding++
+
+	node := &TrieNode{
+		NodeType: METRIC,
+		FullPath: metric,
+		Encoding: enc,
+	}
+	td.root.Children[metric] = node
+
+	td.reverseIndex.metrics[enc] = metric
+	return enc
+}
