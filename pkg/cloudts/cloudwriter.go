@@ -152,7 +152,7 @@ func (w *CloudWriter) uploadTagDictSnapshot(ctx context.Context, td *tagdict.Tag
 
 	// 使用nextencoding作为版本标识
 	version := td.Version()
-	key := fmt.Sprintf("global/tagdict/v%s.bin", version)
+	key := fmt.Sprintf("global/tagdict/v%d.bin", version)
 	_, err = w.s3Uploader.UploadWithContext(ctx, &s3manager.UploadInput{
 		Bucket: aws.String(w.bucket),
 		Key:    aws.String(key),

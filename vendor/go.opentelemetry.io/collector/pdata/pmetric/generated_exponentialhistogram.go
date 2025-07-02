@@ -7,7 +7,6 @@
 package pmetric
 
 import (
-	"go.opentelemetry.io/collector/pdata/internal"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
 )
 
@@ -20,12 +19,11 @@ import (
 // Must use NewExponentialHistogram function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type ExponentialHistogram struct {
-	orig  *otlpmetrics.ExponentialHistogram
-	state *internal.State
+	orig *otlpmetrics.ExponentialHistogram
 }
 
-func newExponentialHistogram(orig *otlpmetrics.ExponentialHistogram, state *internal.State) ExponentialHistogram {
-	return ExponentialHistogram{orig: orig, state: state}
+func newExponentialHistogram(orig *otlpmetrics.ExponentialHistogram) ExponentialHistogram {
+	return ExponentialHistogram{orig}
 }
 
 // NewExponentialHistogram creates a new empty ExponentialHistogram.
@@ -33,15 +31,12 @@ func newExponentialHistogram(orig *otlpmetrics.ExponentialHistogram, state *inte
 // This must be used only in testing code. Users should use "AppendEmpty" when part of a Slice,
 // OR directly access the member if this is embedded in another struct.
 func NewExponentialHistogram() ExponentialHistogram {
-	state := internal.StateMutable
-	return newExponentialHistogram(&otlpmetrics.ExponentialHistogram{}, &state)
+	return newExponentialHistogram(&otlpmetrics.ExponentialHistogram{})
 }
 
 // MoveTo moves all properties from the current struct overriding the destination and
 // resetting the current instance to its zero value
 func (ms ExponentialHistogram) MoveTo(dest ExponentialHistogram) {
-	ms.state.AssertMutable()
-	dest.state.AssertMutable()
 	*dest.orig = *ms.orig
 	*ms.orig = otlpmetrics.ExponentialHistogram{}
 }
@@ -53,18 +48,16 @@ func (ms ExponentialHistogram) AggregationTemporality() AggregationTemporality {
 
 // SetAggregationTemporality replaces the aggregationtemporality associated with this ExponentialHistogram.
 func (ms ExponentialHistogram) SetAggregationTemporality(v AggregationTemporality) {
-	ms.state.AssertMutable()
 	ms.orig.AggregationTemporality = otlpmetrics.AggregationTemporality(v)
 }
 
 // DataPoints returns the DataPoints associated with this ExponentialHistogram.
 func (ms ExponentialHistogram) DataPoints() ExponentialHistogramDataPointSlice {
-	return newExponentialHistogramDataPointSlice(&ms.orig.DataPoints, ms.state)
+	return newExponentialHistogramDataPointSlice(&ms.orig.DataPoints)
 }
 
 // CopyTo copies all properties from the current struct overriding the destination.
 func (ms ExponentialHistogram) CopyTo(dest ExponentialHistogram) {
-	dest.state.AssertMutable()
 	dest.SetAggregationTemporality(ms.AggregationTemporality())
 	ms.DataPoints().CopyTo(dest.DataPoints())
 }

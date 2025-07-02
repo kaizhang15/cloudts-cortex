@@ -8,26 +8,20 @@ import (
 )
 
 type Map struct {
-	orig  *[]otlpcommon.KeyValue
-	state *State
+	orig *[]otlpcommon.KeyValue
 }
 
 func GetOrigMap(ms Map) *[]otlpcommon.KeyValue {
 	return ms.orig
 }
 
-func GetMapState(ms Map) *State {
-	return ms.state
-}
-
-func NewMap(orig *[]otlpcommon.KeyValue, state *State) Map {
-	return Map{orig: orig, state: state}
+func NewMap(orig *[]otlpcommon.KeyValue) Map {
+	return Map{orig: orig}
 }
 
 func GenerateTestMap() Map {
 	var orig []otlpcommon.KeyValue
-	state := StateMutable
-	ms := NewMap(&orig, &state)
+	ms := NewMap(&orig)
 	FillTestMap(ms)
 	return ms
 }

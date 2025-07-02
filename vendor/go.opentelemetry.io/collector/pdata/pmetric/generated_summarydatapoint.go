@@ -20,12 +20,11 @@ import (
 // Must use NewSummaryDataPoint function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type SummaryDataPoint struct {
-	orig  *otlpmetrics.SummaryDataPoint
-	state *internal.State
+	orig *otlpmetrics.SummaryDataPoint
 }
 
-func newSummaryDataPoint(orig *otlpmetrics.SummaryDataPoint, state *internal.State) SummaryDataPoint {
-	return SummaryDataPoint{orig: orig, state: state}
+func newSummaryDataPoint(orig *otlpmetrics.SummaryDataPoint) SummaryDataPoint {
+	return SummaryDataPoint{orig}
 }
 
 // NewSummaryDataPoint creates a new empty SummaryDataPoint.
@@ -33,22 +32,19 @@ func newSummaryDataPoint(orig *otlpmetrics.SummaryDataPoint, state *internal.Sta
 // This must be used only in testing code. Users should use "AppendEmpty" when part of a Slice,
 // OR directly access the member if this is embedded in another struct.
 func NewSummaryDataPoint() SummaryDataPoint {
-	state := internal.StateMutable
-	return newSummaryDataPoint(&otlpmetrics.SummaryDataPoint{}, &state)
+	return newSummaryDataPoint(&otlpmetrics.SummaryDataPoint{})
 }
 
 // MoveTo moves all properties from the current struct overriding the destination and
 // resetting the current instance to its zero value
 func (ms SummaryDataPoint) MoveTo(dest SummaryDataPoint) {
-	ms.state.AssertMutable()
-	dest.state.AssertMutable()
 	*dest.orig = *ms.orig
 	*ms.orig = otlpmetrics.SummaryDataPoint{}
 }
 
 // Attributes returns the Attributes associated with this SummaryDataPoint.
 func (ms SummaryDataPoint) Attributes() pcommon.Map {
-	return pcommon.Map(internal.NewMap(&ms.orig.Attributes, ms.state))
+	return pcommon.Map(internal.NewMap(&ms.orig.Attributes))
 }
 
 // StartTimestamp returns the starttimestamp associated with this SummaryDataPoint.
@@ -58,7 +54,6 @@ func (ms SummaryDataPoint) StartTimestamp() pcommon.Timestamp {
 
 // SetStartTimestamp replaces the starttimestamp associated with this SummaryDataPoint.
 func (ms SummaryDataPoint) SetStartTimestamp(v pcommon.Timestamp) {
-	ms.state.AssertMutable()
 	ms.orig.StartTimeUnixNano = uint64(v)
 }
 
@@ -69,7 +64,6 @@ func (ms SummaryDataPoint) Timestamp() pcommon.Timestamp {
 
 // SetTimestamp replaces the timestamp associated with this SummaryDataPoint.
 func (ms SummaryDataPoint) SetTimestamp(v pcommon.Timestamp) {
-	ms.state.AssertMutable()
 	ms.orig.TimeUnixNano = uint64(v)
 }
 
@@ -80,7 +74,6 @@ func (ms SummaryDataPoint) Count() uint64 {
 
 // SetCount replaces the count associated with this SummaryDataPoint.
 func (ms SummaryDataPoint) SetCount(v uint64) {
-	ms.state.AssertMutable()
 	ms.orig.Count = v
 }
 
@@ -91,13 +84,12 @@ func (ms SummaryDataPoint) Sum() float64 {
 
 // SetSum replaces the sum associated with this SummaryDataPoint.
 func (ms SummaryDataPoint) SetSum(v float64) {
-	ms.state.AssertMutable()
 	ms.orig.Sum = v
 }
 
 // QuantileValues returns the QuantileValues associated with this SummaryDataPoint.
 func (ms SummaryDataPoint) QuantileValues() SummaryDataPointValueAtQuantileSlice {
-	return newSummaryDataPointValueAtQuantileSlice(&ms.orig.QuantileValues, ms.state)
+	return newSummaryDataPointValueAtQuantileSlice(&ms.orig.QuantileValues)
 }
 
 // Flags returns the flags associated with this SummaryDataPoint.
@@ -107,13 +99,11 @@ func (ms SummaryDataPoint) Flags() DataPointFlags {
 
 // SetFlags replaces the flags associated with this SummaryDataPoint.
 func (ms SummaryDataPoint) SetFlags(v DataPointFlags) {
-	ms.state.AssertMutable()
 	ms.orig.Flags = uint32(v)
 }
 
 // CopyTo copies all properties from the current struct overriding the destination.
 func (ms SummaryDataPoint) CopyTo(dest SummaryDataPoint) {
-	dest.state.AssertMutable()
 	ms.Attributes().CopyTo(dest.Attributes())
 	dest.SetStartTimestamp(ms.StartTimestamp())
 	dest.SetTimestamp(ms.Timestamp())

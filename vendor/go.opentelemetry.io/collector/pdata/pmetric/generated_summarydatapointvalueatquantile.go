@@ -7,7 +7,6 @@
 package pmetric
 
 import (
-	"go.opentelemetry.io/collector/pdata/internal"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
 )
 
@@ -19,12 +18,11 @@ import (
 // Must use NewSummaryDataPointValueAtQuantile function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type SummaryDataPointValueAtQuantile struct {
-	orig  *otlpmetrics.SummaryDataPoint_ValueAtQuantile
-	state *internal.State
+	orig *otlpmetrics.SummaryDataPoint_ValueAtQuantile
 }
 
-func newSummaryDataPointValueAtQuantile(orig *otlpmetrics.SummaryDataPoint_ValueAtQuantile, state *internal.State) SummaryDataPointValueAtQuantile {
-	return SummaryDataPointValueAtQuantile{orig: orig, state: state}
+func newSummaryDataPointValueAtQuantile(orig *otlpmetrics.SummaryDataPoint_ValueAtQuantile) SummaryDataPointValueAtQuantile {
+	return SummaryDataPointValueAtQuantile{orig}
 }
 
 // NewSummaryDataPointValueAtQuantile creates a new empty SummaryDataPointValueAtQuantile.
@@ -32,15 +30,12 @@ func newSummaryDataPointValueAtQuantile(orig *otlpmetrics.SummaryDataPoint_Value
 // This must be used only in testing code. Users should use "AppendEmpty" when part of a Slice,
 // OR directly access the member if this is embedded in another struct.
 func NewSummaryDataPointValueAtQuantile() SummaryDataPointValueAtQuantile {
-	state := internal.StateMutable
-	return newSummaryDataPointValueAtQuantile(&otlpmetrics.SummaryDataPoint_ValueAtQuantile{}, &state)
+	return newSummaryDataPointValueAtQuantile(&otlpmetrics.SummaryDataPoint_ValueAtQuantile{})
 }
 
 // MoveTo moves all properties from the current struct overriding the destination and
 // resetting the current instance to its zero value
 func (ms SummaryDataPointValueAtQuantile) MoveTo(dest SummaryDataPointValueAtQuantile) {
-	ms.state.AssertMutable()
-	dest.state.AssertMutable()
 	*dest.orig = *ms.orig
 	*ms.orig = otlpmetrics.SummaryDataPoint_ValueAtQuantile{}
 }
@@ -52,7 +47,6 @@ func (ms SummaryDataPointValueAtQuantile) Quantile() float64 {
 
 // SetQuantile replaces the quantile associated with this SummaryDataPointValueAtQuantile.
 func (ms SummaryDataPointValueAtQuantile) SetQuantile(v float64) {
-	ms.state.AssertMutable()
 	ms.orig.Quantile = v
 }
 
@@ -63,13 +57,11 @@ func (ms SummaryDataPointValueAtQuantile) Value() float64 {
 
 // SetValue replaces the value associated with this SummaryDataPointValueAtQuantile.
 func (ms SummaryDataPointValueAtQuantile) SetValue(v float64) {
-	ms.state.AssertMutable()
 	ms.orig.Value = v
 }
 
 // CopyTo copies all properties from the current struct overriding the destination.
 func (ms SummaryDataPointValueAtQuantile) CopyTo(dest SummaryDataPointValueAtQuantile) {
-	dest.state.AssertMutable()
 	dest.SetQuantile(ms.Quantile())
 	dest.SetValue(ms.Value())
 }

@@ -4,26 +4,20 @@
 package internal // import "go.opentelemetry.io/collector/pdata/internal"
 
 type TraceState struct {
-	orig  *string
-	state *State
+	orig *string
 }
 
 func GetOrigTraceState(ms TraceState) *string {
 	return ms.orig
 }
 
-func GetTraceStateState(ms TraceState) *State {
-	return ms.state
-}
-
-func NewTraceState(orig *string, state *State) TraceState {
-	return TraceState{orig: orig, state: state}
+func NewTraceState(orig *string) TraceState {
+	return TraceState{orig: orig}
 }
 
 func GenerateTestTraceState() TraceState {
 	var orig string
-	state := StateMutable
-	ms := NewTraceState(&orig, &state)
+	ms := NewTraceState(&orig)
 	FillTestTraceState(ms)
 	return ms
 }

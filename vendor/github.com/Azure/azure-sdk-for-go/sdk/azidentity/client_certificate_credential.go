@@ -42,7 +42,8 @@ type ClientCertificateCredentialOptions struct {
 
 // ClientCertificateCredential authenticates a service principal with a certificate.
 type ClientCertificateCredential struct {
-	client *confidentialClient
+	client confidentialClient
+	s      *syncer
 }
 
 // NewClientCertificateCredential constructs a ClientCertificateCredential. Pass nil for options to accept defaults.
@@ -57,22 +58,33 @@ func NewClientCertificateCredential(tenantID string, clientID string, certs []*x
 	if err != nil {
 		return nil, err
 	}
-	msalOpts := confidentialClientOptions{
-		AdditionallyAllowedTenants: options.AdditionallyAllowedTenants,
-		ClientOptions:              options.ClientOptions,
-		DisableInstanceDiscovery:   options.DisableInstanceDiscovery,
-		SendX5C:                    options.SendCertificateChain,
+	var o []confidential.Option
+	if options.SendCertificateChain {
+		o = append(o, confidential.WithX5C())
 	}
-	c, err := newConfidentialClient(tenantID, clientID, credNameCert, cred, msalOpts)
+	o = append(o, confidential.WithInstanceDiscovery(!options.DisableInstanceDiscovery))
+	c, err := getConfidentialClient(clientID, tenantID, cred, &options.ClientOptions, o...)
 	if err != nil {
 		return nil, err
 	}
-	return &ClientCertificateCredential{client: c}, nil
+	cc := ClientCertificateCredential{client: c}
+	cc.s = newSyncer(credNameCert, tenantID, options.AdditionallyAllowedTenants, cc.requestToken, cc.silentAuth)
+	return &cc, nil
 }
 
 // GetToken requests an access token from Azure Active Directory. This method is called automatically by Azure SDK clients.
 func (c *ClientCertificateCredential) GetToken(ctx context.Context, opts policy.TokenRequestOptions) (azcore.AccessToken, error) {
-	return c.client.GetToken(ctx, opts)
+	return c.s.GetToken(ctx, opts)
+}
+
+func (c *ClientCertificateCredential) silentAuth(ctx context.Context, opts policy.TokenRequestOptions) (azcore.AccessToken, error) {
+	ar, err := c.client.AcquireTokenSilent(ctx, opts.Scopes, confidential.WithTenantID(opts.TenantID))
+	return azcore.AccessToken{Token: ar.AccessToken, ExpiresOn: ar.ExpiresOn.UTC()}, err
+}
+
+func (c *ClientCertificateCredential) requestToken(ctx context.Context, opts policy.TokenRequestOptions) (azcore.AccessToken, error) {
+	ar, err := c.client.AcquireTokenByCredential(ctx, opts.Scopes, confidential.WithTenantID(opts.TenantID))
+	return azcore.AccessToken{Token: ar.AccessToken, ExpiresOn: ar.ExpiresOn.UTC()}, err
 }
 
 // ParseCertificates loads certificates and a private key, in PEM or PKCS12 format, for use with NewClientCertificateCredential.

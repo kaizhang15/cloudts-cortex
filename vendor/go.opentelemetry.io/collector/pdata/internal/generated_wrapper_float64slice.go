@@ -7,18 +7,13 @@
 package internal
 
 type Float64Slice struct {
-	orig  *[]float64
-	state *State
+	orig *[]float64
 }
 
 func GetOrigFloat64Slice(ms Float64Slice) *[]float64 {
 	return ms.orig
 }
 
-func GetFloat64SliceState(ms Float64Slice) *State {
-	return ms.state
-}
-
-func NewFloat64Slice(orig *[]float64, state *State) Float64Slice {
-	return Float64Slice{orig: orig, state: state}
+func NewFloat64Slice(orig *[]float64) Float64Slice {
+	return Float64Slice{orig: orig}
 }

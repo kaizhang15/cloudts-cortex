@@ -8,24 +8,18 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 
-	"go.opentelemetry.io/collector/pdata/internal"
 	otlpcollectormetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/metrics/v1"
 	"go.opentelemetry.io/collector/pdata/internal/json"
 )
 
 // ExportResponse represents the response for gRPC/HTTP client/server.
 type ExportResponse struct {
-	orig  *otlpcollectormetrics.ExportMetricsServiceResponse
-	state *internal.State
+	orig *otlpcollectormetrics.ExportMetricsServiceResponse
 }
 
 // NewExportResponse returns an empty ExportResponse.
 func NewExportResponse() ExportResponse {
-	state := internal.StateMutable
-	return ExportResponse{
-		orig:  &otlpcollectormetrics.ExportMetricsServiceResponse{},
-		state: &state,
-	}
+	return ExportResponse{orig: &otlpcollectormetrics.ExportMetricsServiceResponse{}}
 }
 
 // MarshalProto marshals ExportResponse into proto bytes.
@@ -57,7 +51,7 @@ func (ms ExportResponse) UnmarshalJSON(data []byte) error {
 
 // PartialSuccess returns the ExportLogsPartialSuccess associated with this ExportResponse.
 func (ms ExportResponse) PartialSuccess() ExportPartialSuccess {
-	return newExportPartialSuccess(&ms.orig.PartialSuccess, ms.state)
+	return newExportPartialSuccess(&ms.orig.PartialSuccess)
 }
 
 func (ms ExportResponse) unmarshalJsoniter(iter *jsoniter.Iterator) {

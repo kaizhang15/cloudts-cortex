@@ -20,12 +20,11 @@ import (
 // Must use NewNumberDataPoint function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type NumberDataPoint struct {
-	orig  *otlpmetrics.NumberDataPoint
-	state *internal.State
+	orig *otlpmetrics.NumberDataPoint
 }
 
-func newNumberDataPoint(orig *otlpmetrics.NumberDataPoint, state *internal.State) NumberDataPoint {
-	return NumberDataPoint{orig: orig, state: state}
+func newNumberDataPoint(orig *otlpmetrics.NumberDataPoint) NumberDataPoint {
+	return NumberDataPoint{orig}
 }
 
 // NewNumberDataPoint creates a new empty NumberDataPoint.
@@ -33,22 +32,19 @@ func newNumberDataPoint(orig *otlpmetrics.NumberDataPoint, state *internal.State
 // This must be used only in testing code. Users should use "AppendEmpty" when part of a Slice,
 // OR directly access the member if this is embedded in another struct.
 func NewNumberDataPoint() NumberDataPoint {
-	state := internal.StateMutable
-	return newNumberDataPoint(&otlpmetrics.NumberDataPoint{}, &state)
+	return newNumberDataPoint(&otlpmetrics.NumberDataPoint{})
 }
 
 // MoveTo moves all properties from the current struct overriding the destination and
 // resetting the current instance to its zero value
 func (ms NumberDataPoint) MoveTo(dest NumberDataPoint) {
-	ms.state.AssertMutable()
-	dest.state.AssertMutable()
 	*dest.orig = *ms.orig
 	*ms.orig = otlpmetrics.NumberDataPoint{}
 }
 
 // Attributes returns the Attributes associated with this NumberDataPoint.
 func (ms NumberDataPoint) Attributes() pcommon.Map {
-	return pcommon.Map(internal.NewMap(&ms.orig.Attributes, ms.state))
+	return pcommon.Map(internal.NewMap(&ms.orig.Attributes))
 }
 
 // StartTimestamp returns the starttimestamp associated with this NumberDataPoint.
@@ -58,7 +54,6 @@ func (ms NumberDataPoint) StartTimestamp() pcommon.Timestamp {
 
 // SetStartTimestamp replaces the starttimestamp associated with this NumberDataPoint.
 func (ms NumberDataPoint) SetStartTimestamp(v pcommon.Timestamp) {
-	ms.state.AssertMutable()
 	ms.orig.StartTimeUnixNano = uint64(v)
 }
 
@@ -69,7 +64,6 @@ func (ms NumberDataPoint) Timestamp() pcommon.Timestamp {
 
 // SetTimestamp replaces the timestamp associated with this NumberDataPoint.
 func (ms NumberDataPoint) SetTimestamp(v pcommon.Timestamp) {
-	ms.state.AssertMutable()
 	ms.orig.TimeUnixNano = uint64(v)
 }
 
@@ -92,7 +86,6 @@ func (ms NumberDataPoint) DoubleValue() float64 {
 
 // SetDoubleValue replaces the double associated with this NumberDataPoint.
 func (ms NumberDataPoint) SetDoubleValue(v float64) {
-	ms.state.AssertMutable()
 	ms.orig.Value = &otlpmetrics.NumberDataPoint_AsDouble{
 		AsDouble: v,
 	}
@@ -105,7 +98,6 @@ func (ms NumberDataPoint) IntValue() int64 {
 
 // SetIntValue replaces the int associated with this NumberDataPoint.
 func (ms NumberDataPoint) SetIntValue(v int64) {
-	ms.state.AssertMutable()
 	ms.orig.Value = &otlpmetrics.NumberDataPoint_AsInt{
 		AsInt: v,
 	}
@@ -113,7 +105,7 @@ func (ms NumberDataPoint) SetIntValue(v int64) {
 
 // Exemplars returns the Exemplars associated with this NumberDataPoint.
 func (ms NumberDataPoint) Exemplars() ExemplarSlice {
-	return newExemplarSlice(&ms.orig.Exemplars, ms.state)
+	return newExemplarSlice(&ms.orig.Exemplars)
 }
 
 // Flags returns the flags associated with this NumberDataPoint.
@@ -123,13 +115,11 @@ func (ms NumberDataPoint) Flags() DataPointFlags {
 
 // SetFlags replaces the flags associated with this NumberDataPoint.
 func (ms NumberDataPoint) SetFlags(v DataPointFlags) {
-	ms.state.AssertMutable()
 	ms.orig.Flags = uint32(v)
 }
 
 // CopyTo copies all properties from the current struct overriding the destination.
 func (ms NumberDataPoint) CopyTo(dest NumberDataPoint) {
-	dest.state.AssertMutable()
 	ms.Attributes().CopyTo(dest.Attributes())
 	dest.SetStartTimestamp(ms.StartTimestamp())
 	dest.SetTimestamp(ms.Timestamp())

@@ -20,8 +20,8 @@ import (
 // Important: zero-initialized instance is not valid for use.
 type Resource internal.Resource
 
-func newResource(orig *otlpresource.Resource, state *internal.State) Resource {
-	return Resource(internal.NewResource(orig, state))
+func newResource(orig *otlpresource.Resource) Resource {
+	return Resource(internal.NewResource(orig))
 }
 
 // NewResource creates a new empty Resource.
@@ -29,15 +29,12 @@ func newResource(orig *otlpresource.Resource, state *internal.State) Resource {
 // This must be used only in testing code. Users should use "AppendEmpty" when part of a Slice,
 // OR directly access the member if this is embedded in another struct.
 func NewResource() Resource {
-	state := internal.StateMutable
-	return newResource(&otlpresource.Resource{}, &state)
+	return newResource(&otlpresource.Resource{})
 }
 
 // MoveTo moves all properties from the current struct overriding the destination and
 // resetting the current instance to its zero value
 func (ms Resource) MoveTo(dest Resource) {
-	ms.getState().AssertMutable()
-	dest.getState().AssertMutable()
 	*dest.getOrig() = *ms.getOrig()
 	*ms.getOrig() = otlpresource.Resource{}
 }
@@ -46,13 +43,9 @@ func (ms Resource) getOrig() *otlpresource.Resource {
 	return internal.GetOrigResource(internal.Resource(ms))
 }
 
-func (ms Resource) getState() *internal.State {
-	return internal.GetResourceState(internal.Resource(ms))
-}
-
 // Attributes returns the Attributes associated with this Resource.
 func (ms Resource) Attributes() Map {
-	return Map(internal.NewMap(&ms.getOrig().Attributes, internal.GetResourceState(internal.Resource(ms))))
+	return Map(internal.NewMap(&ms.getOrig().Attributes))
 }
 
 // DroppedAttributesCount returns the droppedattributescount associated with this Resource.
@@ -62,13 +55,11 @@ func (ms Resource) DroppedAttributesCount() uint32 {
 
 // SetDroppedAttributesCount replaces the droppedattributescount associated with this Resource.
 func (ms Resource) SetDroppedAttributesCount(v uint32) {
-	ms.getState().AssertMutable()
 	ms.getOrig().DroppedAttributesCount = v
 }
 
 // CopyTo copies all properties from the current struct overriding the destination.
 func (ms Resource) CopyTo(dest Resource) {
-	dest.getState().AssertMutable()
 	ms.Attributes().CopyTo(dest.Attributes())
 	dest.SetDroppedAttributesCount(ms.DroppedAttributesCount())
 }

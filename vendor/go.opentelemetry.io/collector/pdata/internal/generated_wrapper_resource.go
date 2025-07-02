@@ -11,31 +11,25 @@ import (
 )
 
 type Resource struct {
-	orig  *otlpresource.Resource
-	state *State
+	orig *otlpresource.Resource
 }
 
 func GetOrigResource(ms Resource) *otlpresource.Resource {
 	return ms.orig
 }
 
-func GetResourceState(ms Resource) *State {
-	return ms.state
-}
-
-func NewResource(orig *otlpresource.Resource, state *State) Resource {
-	return Resource{orig: orig, state: state}
+func NewResource(orig *otlpresource.Resource) Resource {
+	return Resource{orig: orig}
 }
 
 func GenerateTestResource() Resource {
 	orig := otlpresource.Resource{}
-	state := StateMutable
-	tv := NewResource(&orig, &state)
+	tv := NewResource(&orig)
 	FillTestResource(tv)
 	return tv
 }
 
 func FillTestResource(tv Resource) {
-	FillTestMap(NewMap(&tv.orig.Attributes, tv.state))
+	FillTestMap(NewMap(&tv.orig.Attributes))
 	tv.orig.DroppedAttributesCount = uint32(17)
 }

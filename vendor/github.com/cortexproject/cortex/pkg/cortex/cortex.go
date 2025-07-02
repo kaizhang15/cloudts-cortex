@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
+	"github.com/kaizhang15/cloudts-cortex/pkg/cloudts"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prom_storage "github.com/prometheus/prometheus/storage"
@@ -124,6 +125,8 @@ type Config struct {
 	QueryScheduler      scheduler.Config                           `yaml:"query_scheduler"`
 
 	Tracing tracing.Config `yaml:"tracing"`
+
+	CloudTS cloudts.Config `yaml:"cloudts"`
 }
 
 // RegisterFlags registers flag.
@@ -169,6 +172,7 @@ func (c *Config) RegisterFlags(f *flag.FlagSet) {
 	c.MemberlistKV.RegisterFlags(f)
 	c.QueryScheduler.RegisterFlags(f)
 	c.Tracing.RegisterFlags(f)
+	c.CloudTS.RegisterFlags(f)
 }
 
 // Validate the cortex config and returns an error if the validation
@@ -227,6 +231,10 @@ func (c *Config) Validate(log log.Logger) error {
 
 	if err := c.Tracing.Validate(); err != nil {
 		return errors.Wrap(err, "invalid tracing config")
+	}
+
+	if err := c.CloudTS.Validate(); err != nil {
+		return errors.Wrap(err, "invalid cloudTS config")
 	}
 
 	return nil

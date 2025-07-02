@@ -9,7 +9,6 @@ package pmetric
 import (
 	"sort"
 
-	"go.opentelemetry.io/collector/pdata/internal"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
 )
 
@@ -21,20 +20,18 @@ import (
 // Must use NewMetricSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type MetricSlice struct {
-	orig  *[]*otlpmetrics.Metric
-	state *internal.State
+	orig *[]*otlpmetrics.Metric
 }
 
-func newMetricSlice(orig *[]*otlpmetrics.Metric, state *internal.State) MetricSlice {
-	return MetricSlice{orig: orig, state: state}
+func newMetricSlice(orig *[]*otlpmetrics.Metric) MetricSlice {
+	return MetricSlice{orig}
 }
 
 // NewMetricSlice creates a MetricSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewMetricSlice() MetricSlice {
 	orig := []*otlpmetrics.Metric(nil)
-	state := internal.StateMutable
-	return newMetricSlice(&orig, &state)
+	return newMetricSlice(&orig)
 }
 
 // Len returns the number of elements in the slice.
@@ -53,7 +50,7 @@ func (es MetricSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es MetricSlice) At(i int) Metric {
-	return newMetric((*es.orig)[i], es.state)
+	return newMetric((*es.orig)[i])
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -69,7 +66,6 @@ func (es MetricSlice) At(i int) Metric {
 //	    // Here should set all the values for e.
 //	}
 func (es MetricSlice) EnsureCapacity(newCap int) {
-	es.state.AssertMutable()
 	oldCap := cap(*es.orig)
 	if newCap <= oldCap {
 		return
@@ -83,7 +79,6 @@ func (es MetricSlice) EnsureCapacity(newCap int) {
 // AppendEmpty will append to the end of the slice an empty Metric.
 // It returns the newly added Metric.
 func (es MetricSlice) AppendEmpty() Metric {
-	es.state.AssertMutable()
 	*es.orig = append(*es.orig, &otlpmetrics.Metric{})
 	return es.At(es.Len() - 1)
 }
@@ -91,8 +86,6 @@ func (es MetricSlice) AppendEmpty() Metric {
 // MoveAndAppendTo moves all elements from the current slice and appends them to the dest.
 // The current slice will be cleared.
 func (es MetricSlice) MoveAndAppendTo(dest MetricSlice) {
-	es.state.AssertMutable()
-	dest.state.AssertMutable()
 	if *dest.orig == nil {
 		// We can simply move the entire vector and avoid any allocations.
 		*dest.orig = *es.orig
@@ -105,7 +98,6 @@ func (es MetricSlice) MoveAndAppendTo(dest MetricSlice) {
 // RemoveIf calls f sequentially for each element present in the slice.
 // If f returns true, the element is removed from the slice.
 func (es MetricSlice) RemoveIf(f func(Metric) bool) {
-	es.state.AssertMutable()
 	newLen := 0
 	for i := 0; i < len(*es.orig); i++ {
 		if f(es.At(i)) {
@@ -125,13 +117,12 @@ func (es MetricSlice) RemoveIf(f func(Metric) bool) {
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es MetricSlice) CopyTo(dest MetricSlice) {
-	dest.state.AssertMutable()
 	srcLen := es.Len()
 	destCap := cap(*dest.orig)
 	if srcLen <= destCap {
 		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
 		for i := range *es.orig {
-			newMetric((*es.orig)[i], es.state).CopyTo(newMetric((*dest.orig)[i], dest.state))
+			newMetric((*es.orig)[i]).CopyTo(newMetric((*dest.orig)[i]))
 		}
 		return
 	}
@@ -139,7 +130,7 @@ func (es MetricSlice) CopyTo(dest MetricSlice) {
 	wrappers := make([]*otlpmetrics.Metric, srcLen)
 	for i := range *es.orig {
 		wrappers[i] = &origs[i]
-		newMetric((*es.orig)[i], es.state).CopyTo(newMetric(wrappers[i], dest.state))
+		newMetric((*es.orig)[i]).CopyTo(newMetric(wrappers[i]))
 	}
 	*dest.orig = wrappers
 }
@@ -148,6 +139,5 @@ func (es MetricSlice) CopyTo(dest MetricSlice) {
 // provided less function so that two instances of MetricSlice
 // can be compared.
 func (es MetricSlice) Sort(less func(a, b Metric) bool) {
-	es.state.AssertMutable()
 	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }

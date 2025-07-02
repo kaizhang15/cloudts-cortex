@@ -33,7 +33,8 @@ type ClientSecretCredentialOptions struct {
 
 // ClientSecretCredential authenticates an application with a client secret.
 type ClientSecretCredential struct {
-	client *confidentialClient
+	client confidentialClient
+	s      *syncer
 }
 
 // NewClientSecretCredential constructs a ClientSecretCredential. Pass nil for options to accept defaults.
@@ -45,21 +46,30 @@ func NewClientSecretCredential(tenantID string, clientID string, clientSecret st
 	if err != nil {
 		return nil, err
 	}
-	msalOpts := confidentialClientOptions{
-		AdditionallyAllowedTenants: options.AdditionallyAllowedTenants,
-		ClientOptions:              options.ClientOptions,
-		DisableInstanceDiscovery:   options.DisableInstanceDiscovery,
-	}
-	c, err := newConfidentialClient(tenantID, clientID, credNameSecret, cred, msalOpts)
+	c, err := getConfidentialClient(
+		clientID, tenantID, cred, &options.ClientOptions, confidential.WithInstanceDiscovery(!options.DisableInstanceDiscovery),
+	)
 	if err != nil {
 		return nil, err
 	}
-	return &ClientSecretCredential{c}, nil
+	csc := ClientSecretCredential{client: c}
+	csc.s = newSyncer(credNameSecret, tenantID, options.AdditionallyAllowedTenants, csc.requestToken, csc.silentAuth)
+	return &csc, nil
 }
 
 // GetToken requests an access token from Azure Active Directory. This method is called automatically by Azure SDK clients.
 func (c *ClientSecretCredential) GetToken(ctx context.Context, opts policy.TokenRequestOptions) (azcore.AccessToken, error) {
-	return c.client.GetToken(ctx, opts)
+	return c.s.GetToken(ctx, opts)
+}
+
+func (c *ClientSecretCredential) silentAuth(ctx context.Context, opts policy.TokenRequestOptions) (azcore.AccessToken, error) {
+	ar, err := c.client.AcquireTokenSilent(ctx, opts.Scopes, confidential.WithTenantID(opts.TenantID))
+	return azcore.AccessToken{Token: ar.AccessToken, ExpiresOn: ar.ExpiresOn.UTC()}, err
+}
+
+func (c *ClientSecretCredential) requestToken(ctx context.Context, opts policy.TokenRequestOptions) (azcore.AccessToken, error) {
+	ar, err := c.client.AcquireTokenByCredential(ctx, opts.Scopes, confidential.WithTenantID(opts.TenantID))
+	return azcore.AccessToken{Token: ar.AccessToken, ExpiresOn: ar.ExpiresOn.UTC()}, err
 }
 
 var _ azcore.TokenCredential = (*ClientSecretCredential)(nil)

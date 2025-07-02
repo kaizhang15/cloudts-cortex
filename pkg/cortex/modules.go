@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
+	"github.com/kaizhang15/cloudts-cortex/pkg/cloudts"
 	"github.com/opentracing-contrib/go-stdlib/nethttp"
 	"github.com/opentracing/opentracing-go"
 	"github.com/pkg/errors"
@@ -765,6 +766,9 @@ func (t *Cortex) setupModuleManager() error {
 	mm.RegisterModule(QueryScheduler, t.initQueryScheduler)
 	mm.RegisterModule(TenantFederation, t.initTenantFederation, modules.UserInvisibleModule)
 	mm.RegisterModule(All, nil)
+
+	// 注册自定义 cloudts 模块（来自 cloudts.RegisterModule）
+	cloudts.RegisterModule(mm, &t.Cfg.CloudTS)
 
 	// Add dependencies
 	deps := map[string][]string{

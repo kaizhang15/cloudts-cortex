@@ -66,6 +66,22 @@ Then you may find the monitoring data is collected by Prometheus an Cortex.
 
 To run CloudTS with cortex, it has the same build steps.
 
+For CloudTS, it has more configuration options as listed below:
+
+```
+cloudts:
+  s3:
+    bucket: my-bucket
+    region: region_exp
+    access_key: xxxxxxx
+    secret_key: xxxxxxx
+    endpoint: http://minio:9000
+  partition_duration: 2h
+  max_upload_connections: 5
+  
+```
+
+
 
 
 ### Evaluation

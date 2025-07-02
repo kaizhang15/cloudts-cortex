@@ -8,20 +8,15 @@ import (
 )
 
 type Value struct {
-	orig  *otlpcommon.AnyValue
-	state *State
+	orig *otlpcommon.AnyValue
 }
 
 func GetOrigValue(ms Value) *otlpcommon.AnyValue {
 	return ms.orig
 }
 
-func GetValueState(ms Value) *State {
-	return ms.state
-}
-
-func NewValue(orig *otlpcommon.AnyValue, state *State) Value {
-	return Value{orig: orig, state: state}
+func NewValue(orig *otlpcommon.AnyValue) Value {
+	return Value{orig: orig}
 }
 
 func FillTestValue(dest Value) {
@@ -30,8 +25,7 @@ func FillTestValue(dest Value) {
 
 func GenerateTestValue() Value {
 	var orig otlpcommon.AnyValue
-	state := StateMutable
-	ms := NewValue(&orig, &state)
+	ms := NewValue(&orig)
 	FillTestValue(ms)
 	return ms
 }

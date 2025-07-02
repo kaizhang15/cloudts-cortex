@@ -2535,7 +2535,7 @@ type groupedAggregation struct {
 func (ev *evaluator) aggregation(e *parser.AggregateExpr, grouping []string, param interface{}, vec Vector, seriesHelper []EvalSeriesHelper, enh *EvalNodeHelper) (Vector, annotations.Annotations) {
 	op := e.Op
 	without := e.Without
-	var annos annotations.Annotations
+	annos := annotations.Annotations{}
 	result := map[uint64]*groupedAggregation{}
 	orderedResult := []*groupedAggregation{}
 	var k int64

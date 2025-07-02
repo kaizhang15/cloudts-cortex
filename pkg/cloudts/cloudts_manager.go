@@ -3,7 +3,9 @@ package cloudts
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"sync"
 	"time"
@@ -29,10 +31,11 @@ type CloudTSManager struct {
 	cloudQuerier  *CloudQuerier
 
 	// 分区管理
-	partitionMutex sync.RWMutex
-	partitions     map[uint64]*timePartition // key: partition timestamp
-	closeChan      chan struct{}
-	wg             sync.WaitGroup
+	partitionMutex    sync.RWMutex
+	partitions        map[uint64]*timePartition // key: partition timestamp
+	earliestTimestamp int64
+	closeChan         chan struct{}
+	wg                sync.WaitGroup
 }
 
 type timePartition struct {
@@ -430,4 +433,34 @@ func (p *timePartition) Contains(t time.Time) bool {
 // 添加全局TagDict的访问方法
 func (m *CloudTSManager) GetGlobalTagDict() *tagdict.TagDict {
 	return m.globalTagDict
+}
+
+func (m *CloudTSManager) GetEarliestTimestamp() (int64, error) {
+	// 如果已缓存最早时间戳
+	if m.earliestTimestamp > 0 {
+		return m.earliestTimestamp, nil
+	}
+
+	// 从分区数据中扫描
+	m.partitionMutex.RLock()
+	defer m.partitionMutex.RUnlock()
+
+	var earliest int64 = math.MaxInt64
+	found := false
+
+	// 遍历所有分区查找最早时间
+	for _, partition := range m.partitions {
+		if partition.startTime.UnixMilli() < earliest {
+			earliest = partition.startTime.UnixMilli()
+			found = true
+		}
+	}
+
+	if !found {
+		return 0, errors.New("no data available")
+	}
+
+	// 缓存结果
+	m.earliestTimestamp = earliest
+	return earliest, nil
 }

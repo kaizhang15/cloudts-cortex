@@ -24,12 +24,11 @@ import (
 // Must use NewExemplar function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type Exemplar struct {
-	orig  *otlpmetrics.Exemplar
-	state *internal.State
+	orig *otlpmetrics.Exemplar
 }
 
-func newExemplar(orig *otlpmetrics.Exemplar, state *internal.State) Exemplar {
-	return Exemplar{orig: orig, state: state}
+func newExemplar(orig *otlpmetrics.Exemplar) Exemplar {
+	return Exemplar{orig}
 }
 
 // NewExemplar creates a new empty Exemplar.
@@ -37,15 +36,12 @@ func newExemplar(orig *otlpmetrics.Exemplar, state *internal.State) Exemplar {
 // This must be used only in testing code. Users should use "AppendEmpty" when part of a Slice,
 // OR directly access the member if this is embedded in another struct.
 func NewExemplar() Exemplar {
-	state := internal.StateMutable
-	return newExemplar(&otlpmetrics.Exemplar{}, &state)
+	return newExemplar(&otlpmetrics.Exemplar{})
 }
 
 // MoveTo moves all properties from the current struct overriding the destination and
 // resetting the current instance to its zero value
 func (ms Exemplar) MoveTo(dest Exemplar) {
-	ms.state.AssertMutable()
-	dest.state.AssertMutable()
 	*dest.orig = *ms.orig
 	*ms.orig = otlpmetrics.Exemplar{}
 }
@@ -57,7 +53,6 @@ func (ms Exemplar) Timestamp() pcommon.Timestamp {
 
 // SetTimestamp replaces the timestamp associated with this Exemplar.
 func (ms Exemplar) SetTimestamp(v pcommon.Timestamp) {
-	ms.state.AssertMutable()
 	ms.orig.TimeUnixNano = uint64(v)
 }
 
@@ -80,7 +75,6 @@ func (ms Exemplar) DoubleValue() float64 {
 
 // SetDoubleValue replaces the double associated with this Exemplar.
 func (ms Exemplar) SetDoubleValue(v float64) {
-	ms.state.AssertMutable()
 	ms.orig.Value = &otlpmetrics.Exemplar_AsDouble{
 		AsDouble: v,
 	}
@@ -93,7 +87,6 @@ func (ms Exemplar) IntValue() int64 {
 
 // SetIntValue replaces the int associated with this Exemplar.
 func (ms Exemplar) SetIntValue(v int64) {
-	ms.state.AssertMutable()
 	ms.orig.Value = &otlpmetrics.Exemplar_AsInt{
 		AsInt: v,
 	}
@@ -101,7 +94,7 @@ func (ms Exemplar) SetIntValue(v int64) {
 
 // FilteredAttributes returns the FilteredAttributes associated with this Exemplar.
 func (ms Exemplar) FilteredAttributes() pcommon.Map {
-	return pcommon.Map(internal.NewMap(&ms.orig.FilteredAttributes, ms.state))
+	return pcommon.Map(internal.NewMap(&ms.orig.FilteredAttributes))
 }
 
 // TraceID returns the traceid associated with this Exemplar.
@@ -111,7 +104,6 @@ func (ms Exemplar) TraceID() pcommon.TraceID {
 
 // SetTraceID replaces the traceid associated with this Exemplar.
 func (ms Exemplar) SetTraceID(v pcommon.TraceID) {
-	ms.state.AssertMutable()
 	ms.orig.TraceId = data.TraceID(v)
 }
 
@@ -122,13 +114,11 @@ func (ms Exemplar) SpanID() pcommon.SpanID {
 
 // SetSpanID replaces the spanid associated with this Exemplar.
 func (ms Exemplar) SetSpanID(v pcommon.SpanID) {
-	ms.state.AssertMutable()
 	ms.orig.SpanId = data.SpanID(v)
 }
 
 // CopyTo copies all properties from the current struct overriding the destination.
 func (ms Exemplar) CopyTo(dest Exemplar) {
-	dest.state.AssertMutable()
 	dest.SetTimestamp(ms.Timestamp())
 	switch ms.ValueType() {
 	case ExemplarValueTypeDouble:

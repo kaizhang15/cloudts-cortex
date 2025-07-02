@@ -151,7 +151,7 @@ func (s *seriesAdapter) Iterator(it chunkenc.Iterator) chunkenc.Iterator {
 	return newSeriesIterator(s.obj)
 }
 
-// seriesIterator 实现 storage.SeriesIterator 接口
+// seriesIterator 实现 chunkenc.Iterator 接口
 type seriesIterator struct {
 	obj       *tsobject.TSObject
 	chunkIdx  int
@@ -213,6 +213,20 @@ func (it *seriesIterator) Seek(t int64) chunkenc.ValueType {
 		}
 	}
 }
+
+// func (it *seriesIterator) Seek(t int64, help int) (int64, error) {
+//     // 简单实现：顺序查找直到找到>=t的点
+//     for {
+//         valType := it.Next()
+//         if valType == chunkenc.ValNone {
+//             return 0, it.Err()
+//         }
+//         ts, _ := it.At()
+//         if ts >= t {
+//             return ts, nil
+//         }
+//     }
+// }
 
 func (it *seriesIterator) At() (int64, float64) {
 	if it.currIter == nil {

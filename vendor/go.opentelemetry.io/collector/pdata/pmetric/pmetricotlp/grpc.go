@@ -10,7 +10,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/collector/pdata/internal"
 	otlpcollectormetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/metrics/v1"
 	"go.opentelemetry.io/collector/pdata/internal/otlp"
 )
@@ -40,11 +39,7 @@ type grpcClient struct {
 
 func (c *grpcClient) Export(ctx context.Context, request ExportRequest, opts ...grpc.CallOption) (ExportResponse, error) {
 	rsp, err := c.rawClient.Export(ctx, request.orig, opts...)
-	if err != nil {
-		return ExportResponse{}, err
-	}
-	state := internal.StateMutable
-	return ExportResponse{orig: rsp, state: &state}, err
+	return ExportResponse{orig: rsp}, err
 }
 
 func (c *grpcClient) unexported() {}
@@ -84,7 +79,6 @@ type rawMetricsServer struct {
 
 func (s rawMetricsServer) Export(ctx context.Context, request *otlpcollectormetrics.ExportMetricsServiceRequest) (*otlpcollectormetrics.ExportMetricsServiceResponse, error) {
 	otlp.MigrateMetrics(request.ResourceMetrics)
-	state := internal.StateMutable
-	rsp, err := s.srv.Export(ctx, ExportRequest{orig: request, state: &state})
+	rsp, err := s.srv.Export(ctx, ExportRequest{orig: request})
 	return rsp.orig, err
 }

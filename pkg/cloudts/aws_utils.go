@@ -10,12 +10,12 @@ import (
 )
 
 type S3Config struct {
-	Bucket       string
-	Region       string
-	AccessKey    string
-	SecretKey    string
-	SessionToken string
-	Endpoint     string // 可选，用于兼容其他S3兼容存储
+	Bucket       string `yaml:"bucket"`
+	Region       string `yaml:"region"`
+	AccessKey    string `yaml:"access_key"`
+	SecretKey    string `yaml:"secret_key"`
+	SessionToken string `yaml:"session_token"`
+	Endpoint     string `yaml:"endpoint"` // 可选，用于兼容其他S3兼容存储
 }
 
 func newAWSSession(config S3Config) *session.Session {
