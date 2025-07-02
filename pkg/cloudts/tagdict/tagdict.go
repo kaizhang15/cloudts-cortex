@@ -102,3 +102,43 @@ func (td *TagDict) BatchGetOrCreate(tagPairs []string) map[string]uint32 {
 
 	return results
 }
+
+func (td *TagDict) GetLabelNames() []string {
+	td.lock.RLock()
+	defer td.lock.RUnlock()
+
+	names := make(map[string]struct{})
+	for _, tagPair := range td.reverseIndex.tags {
+		parts := strings.SplitN(tagPair, "=", 2)
+		if len(parts) > 0 {
+			names[parts[0]] = struct{}{}
+		}
+	}
+
+	result := make([]string, 0, len(names))
+	for name := range names {
+		result = append(result, name)
+	}
+	return result
+}
+
+func (td *TagDict) GetLabelValues(name string) ([]string, error) {
+	td.lock.RLock()
+	defer td.lock.RUnlock()
+
+	values := make(map[string]struct{})
+	prefix := name + "="
+
+	for _, tagPair := range td.reverseIndex.tags {
+		if strings.HasPrefix(tagPair, prefix) {
+			val := strings.TrimPrefix(tagPair, prefix)
+			values[val] = struct{}{}
+		}
+	}
+
+	result := make([]string, 0, len(values))
+	for val := range values {
+		result = append(result, val)
+	}
+	return result, nil
+}

@@ -16,7 +16,6 @@ import (
 	"github.com/kaizhang15/cloudts-cortex/pkg/cloudts/tsobject"
 	"github.com/kaizhang15/cloudts-cortex/pkg/cloudts/ttmapping"
 	"github.com/prometheus/prometheus/model/labels"
-	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/tsdb/chunkenc"
 	"github.com/prometheus/prometheus/tsdb/chunks"
 )
@@ -42,6 +41,8 @@ type timePartition struct {
 	ttMapping *ttmapping.TTMapping
 	tsObjects map[uint32]*tsobject.TSObject // key: groupID
 	lastUsed  time.Time
+	startTime time.Time
+	Duration  uint16 // default: 2
 	mu        sync.Mutex
 }
 
@@ -139,6 +140,8 @@ func (m *CloudTSManager) getOrCreatePartition(partitionID uint64) *timePartition
 		id:        partitionID,
 		tsObjects: make(map[uint32]*tsobject.TSObject),
 		lastUsed:  time.Now(),
+		startTime: time.Now(),
+		Duration:  2,
 	}
 	m.partitions[partitionID] = p
 	level.Info(m.logger).Log("msg", "created new partition", "partition", partitionID)
@@ -153,7 +156,7 @@ func (m *CloudTSManager) Ingest(ctx context.Context, series []cortexpb.TimeSerie
 
 	// 确定分区 (使用第一个样本的时间戳)
 	partitionTime := time.UnixMilli(series[0].Samples[0].TimestampMs).UTC()
-	partitionID := uint64(partitionTime.Truncate(time.Hour).Unix())
+	partitionID := uint64(partitionTime.Unix())
 	partition := m.getOrCreatePartition(partitionID)
 
 	// 序列化处理单个分区
@@ -332,7 +335,7 @@ func (m *CloudTSManager) getQueryPartitions(start, end time.Time) []*timePartiti
 	defer m.partitionMutex.RUnlock()
 
 	var partitions []*timePartition
-	current := start.Truncate(time.Hour)
+	current := start
 
 	for current.Before(end) {
 		partID := uint64(current.Unix())
@@ -396,118 +399,35 @@ func convertToChunkMetas(series cortexpb.TimeSeries) []chunks.Meta {
 	}
 }
 
-// CortexTSDBAdapter 实现Cortex存储接口
-type CortexTSDBAdapter struct {
-	mgr    *CloudTSManager
-	logger log.Logger
-}
+// GetPartitionForTime 获取指定时间对应的分区（保持原有实现逻辑）
+func (m *CloudTSManager) GetPartitionForTime(t time.Time) *timePartition {
+	m.partitionMutex.RLock()
+	defer m.partitionMutex.RUnlock()
 
-func NewCortexAdapter(mgr *CloudTSManager, logger log.Logger) *CortexTSDBAdapter {
-	return &CortexTSDBAdapter{
-		mgr:    mgr,
-		logger: logger,
+	// 线性扫描所有分区查找包含该时间点的分区
+	for _, partition := range m.partitions {
+		if partition.Contains(t) {
+			// 更新最后访问时间
+			partition.mu.Lock()
+			partition.lastUsed = time.Now()
+			partition.mu.Unlock()
+			return partition
+		}
 	}
-}
-
-func (a *CortexTSDBAdapter) Select(
-	matchers []*labels.Matcher,
-	start, end time.Time,
-) (storage.SeriesSet, error) {
-	objs, err := a.mgr.Query(context.Background(), matchers, start, end)
-	if err != nil {
-		return nil, err
-	}
-	return newSeriesSetAdapter(objs), nil
-}
-
-// seriesSetAdapter implements storage.SeriesSet for []*tsobject.TSObject
-type seriesSetAdapter struct {
-	objects []*tsobject.TSObject
-	idx     int
-}
-
-func newSeriesSetAdapter(objects []*tsobject.TSObject) storage.SeriesSet {
-	return &seriesSetAdapter{
-		objects: objects,
-		idx:     -1, // Start before the first element
-	}
-}
-
-// Next moves to the next series (required by storage.SeriesSet)
-func (a *seriesSetAdapter) Next() bool {
-	a.idx++
-	return a.idx < len(a.objects)
-}
-
-// At returns the current series (required by storage.SeriesSet)
-func (a *seriesSetAdapter) At() storage.Series {
-	if a.idx < 0 || a.idx >= len(a.objects) {
-		return nil
-	}
-	return newSeriesAdapter(a.objects[a.idx])
-}
-
-// Err returns any iteration error (required by storage.SeriesSet)
-func (a *seriesSetAdapter) Err() error {
-	return nil // Assuming no error during iteration
-}
-
-// seriesAdapter implements storage.Series for a single TSObject
-type seriesAdapter struct {
-	obj *tsobject.TSObject
-}
-
-func newSeriesAdapter(obj *tsobject.TSObject) storage.Series {
-	return &seriesAdapter{obj: obj}
-}
-
-// Labels returns the Prometheus labels for the series
-func (s *seriesAdapter) Labels() labels.Labels {
-	// TODO: Convert TSObject tags to Prometheus labels
-	// Example (adjust based on your TSObject structure):
-	return labels.FromStrings(
-		"__name__", s.obj.MetricName(),
-		"instance", s.obj.Instance(),
-	)
-}
-
-// Iterator returns a chunk iterator for the series data
-func (s *seriesAdapter) Iterator() storage.SeriesIterator {
-	// TODO: Convert TSObject data into a Prometheus SeriesIterator
-	// This depends on how your TSObject stores samples.
-	return newSeriesIterator(s.obj)
-}
-
-// seriesIterator implements storage.SeriesIterator for TSObject data
-type seriesIterator struct {
-	obj     *tsobject.TSObject
-	pos     int
-	samples []sample // Assume sample is {t int64, v float64}
-}
-
-func newSeriesIterator(obj *tsobject.TSObject) storage.SeriesIterator {
-	// TODO: Extract samples from TSObject into []sample
-	return &seriesIterator{
-		obj:     obj,
-		samples: convertToSamples(obj), // Implement this
-	}
-}
-
-func (it *seriesIterator) Next() bool {
-	it.pos++
-	return it.pos < len(it.samples)
-}
-
-func (it *seriesIterator) At() (int64, float64) {
-	return it.samples[it.pos].t, it.samples[it.pos].v
-}
-
-func (it *seriesIterator) Err() error {
 	return nil
 }
 
-// Helper type for sample storage
-type sample struct {
-	t int64   // timestamp
-	v float64 // value
+// Contains 检查分区是否包含特定时间点
+func (p *timePartition) Contains(t time.Time) bool {
+	start := p.startTime
+	end := p.startTime
+	for range p.Duration {
+		end.Add(time.Hour)
+	}
+	return !t.Before(start) && t.Before(end)
+}
+
+// 添加全局TagDict的访问方法
+func (m *CloudTSManager) GetGlobalTagDict() *tagdict.TagDict {
+	return m.globalTagDict
 }
