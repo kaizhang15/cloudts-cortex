@@ -1,0 +1,10 @@
+\n
+                     ----------\n
+        time_connect:  %{time_connect}s\n
+    time_pretransfer:  %{time_pretransfer}s\n
+  time_starttransfer:  %{time_starttransfer}s\n
+          time_total:  %{time_total}s\n
+                     ----------\n
+      query_duration:  %{time_total}s - %{time_connect}s\n
+
+

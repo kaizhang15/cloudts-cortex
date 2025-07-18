@@ -181,3 +181,7 @@ To evaluate it, you can run as follows:
 
    
 
+### Reproducing
+
+Scripts are provided in the `./scripts` directory to facilitate the reproduction of main results. Follow the detailed instructions provided in the [scripts directory](https://github.com/kaizhang15/cloudts-cortex/blob/main/scripts/README.md).
+
